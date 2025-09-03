@@ -1,147 +1,133 @@
 Project overview
+An end-to-end article text analysis pipeline that reads URLs from an Excel file, scrapes only title/body content, computes sentiment and readability metrics, and exports a template-aligned Excel report. The workflow is split into extraction, metrics, and orchestration for clarity and maintainability.
 
-A) How the solution is approached
+How the solution is approached
 
-1.	Clear separation of responsibilities
-●	extract.py: Fetches each web page, removes non-content elements (scripts, nav, header, footer, aside), and extracts only the article title and paragraph text. It saves one .txt file per URL_ID in the Text/ folder.
-●	metrics.py: Computes all required metrics from Text-Analysis.docx:
-●	Sentiment: Positive Score, Negative Score, Polarity Score, Subjectivity Score.
-●	Readability: Average Sentence Length, Percentage of Complex Words, Fog Index.
-●	Structure/Counts: Complex Word Count, Word Count (excluding provided stopwords), Syllables per Word, Personal Pronouns, Average Word Length.
-●	analyze.py: Orchestrates the pipeline—reads Input.xlsx, triggers extraction if needed, computes metrics, aligns results to the Output Data Structure.xlsx template, and writes Output.xlsx.
+Clear separation of responsibilities
 
-2.	Content extraction strategy
-●	Mimic a real browser by setting realistic HTTP headers (User-Agent, Accept, Accept-Language, Referer), reducing blocks (e.g., 406/403).
-●	Prefer known article containers on insights.blackcoffer.com (e.g., div.td-post-content). If not found, fall back to joining all paragraph tags.
-●	Remove header, footer, nav, aside, script, and style nodes to comply with the requirement: include only article title and main article text.
+extract.py: Fetch pages, strip boilerplate (scripts, nav, header, footer, aside), and keep only article title and paragraph text; save one .txt per URL_ID in Text/.
 
-3.	Text cleaning and tokenization
-●	Tokenize sentences and words; retain only alphabetic tokens for metrics.
-●	Lowercase tokens for dictionary matching.
-●	Stopwords are only removed for the Word Count metric; for sentiment metrics, the full token set (alphabetic) is used.
+metrics.py: Computes metrics:
 
-4.	Metric definitions (aligned to Text-Analysis.docx)
-●	Positive Score: Count of tokens present in positive-words.txt.
-●	Negative Score: Count of tokens present in negative-words.txt.
-●	Polarity Score: (Positive − Negative) / ((Positive + Negative) + 0.000001).
-●	Subjectivity Score: (Positive + Negative) / (Total words + 0.000001).
-●	Complex Word: A word with more than 2 syllables.
-●	Average Sentence Length: Total words / Total sentences.
-●	Percentage of Complex Words: Complex Word Count / Total words.
-●	Fog Index: 0.4 × (Average Sentence Length + Percentage of Complex Words × 100).
-●	Word Count: Count of words excluding all provided stopwords (from Original/StopWords).
-●	Syllables per Word: Average syllables across words; syllable count approximated via vowel-group counting with an adjustment for words ending in “es” or “ed” when count>1.
-●	Personal Pronouns: Count of “I”, “we”, “my”, “ours”, “us” (case-insensitive), excluding “US” via word boundaries.
-●	Average Word Length: Total characters across words / number of words.
-●	The column “AVG NUMBER OF WORDS PER SENTENCE” is set equal to “AVG SENTENCE LENGTH” per the typical template.
+Sentiment: Positive Score, Negative Score, Polarity, Subjectivity.
 
-5.	Output conformance
-●	The output DataFrame strictly uses the column names and order from Original/Output Data Structure.xlsx.
-●	Floating metrics are rounded to 2 decimals to avoid format mismatches.
-●	Output is saved to Output.xlsx in the project root.
+Readability: Average Sentence Length, Percentage of Complex Words, Fog Index.
 
-B) How to run the project
+Structure/Counts: Complex Word Count, Word Count (stopwords removed), Syllables per Word, Personal Pronouns, Average Word Length.
+
+analyze.py: Orchestrates the run—reads Input.xlsx, triggers scraping if needed, computes metrics, matches Output Data Structure.xlsx columns, writes Output.xlsx.
+
+Content extraction strategy
+
+Use realistic HTTP headers (User-Agent, Accept, Accept-Language, Referer) to reduce 403/406 blocks.
+
+Prefer known article containers (e.g., div.td-post-content). If missing, fall back to all paragraph tags.
+
+Remove header, footer, nav, aside, script, and style nodes to keep only article content.
+
+Text cleaning and tokenization
+
+Tokenize sentences and words; keep alphabetic tokens.
+
+Lowercase for dictionary matching.
+
+Remove stopwords only for Word Count; sentiment uses the full alphabetic token set.
+
+Metric definitions
+
+Positive/Negative Score: Matches tokens against provided dictionaries.
+
+Polarity: (Positive − Negative) / ((Positive + Negative) + 0.000001).
+
+Subjectivity: (Positive + Negative) / (Total words + 0.000001).
+
+Complex Word: > 2 syllables.
+
+Average Sentence Length: Total words / Total sentences.
+
+Percentage Complex Words: Complex / Total words.
+
+Fog Index: 0.4 × (Average Sentence Length + Percentage Complex Words × 100).
+
+Word Count: Tokens excluding provided stopwords (Original/StopWords).
+
+Syllables per Word: Vowel-group heuristic with “-es/-ed” adjustment when count > 1.
+
+Personal Pronouns: Count of “I, we, my, ours, us” with word boundaries (case-insensitive).
+
+Average Word Length: Total characters / number of words.
+
+Note: “AVG NUMBER OF WORDS PER SENTENCE” equals “AVG SENTENCE LENGTH” to satisfy the template.
+
+Output conformance
+
+Uses the exact column names and order from Original/Output Data Structure.xlsx.
+
+Rounds numeric metrics to two decimals.
+
+Saves the final report as Output.xlsx in the project root.
+
+How to run
 Prerequisites
-●	Windows with Python 3.12 installed (recommended).
-●	The following folders/files present (as per your setup):
-●	Original/
-●	Input.xlsx
-●	Output Data Structure.xlsx
-●	MasterDictionary/positive-words.txt
-●	MasterDictionary/negative-words.txt
-●	StopWords/ (contains multiple stopword .txt files)
-●	src/
-●	analyze.py
-●	extract.py
-●	metrics.py
-●	Text/ (will be created if missing)
 
-1.	Create and activate a virtual environment (recommended)
-●	Open a terminal in the project root (e.g., C:\Users\91897\OneDrive\Desktop\BlackCoffer Assignment).
-●	py -3.12 -m venv venv
-●	venv\Scripts\activate
+Windows with Python 3.12 recommended.
 
-2.	Install dependencies into the venv
-●	python -m pip install --upgrade pip
-●	pip install requests beautifulsoup4 lxml pandas numpy nltk regex openpyxl
-●	python -m nltk.downloader punkt
+Folder layout:
 
-3.	Run the pipeline
-●	cd src
-●	python analyze.py
-What happens:
-●	For each row in Original\Input.xlsx, the script checks Text<URL_ID>.txt.
-●	If missing or empty, it scrapes the page and saves the cleaned article text.
-●	It computes all metrics and writes the final results to Output.xlsx in the project root.
+Original/
 
-4.	Re-running
-●	If you delete any .txt from Text/, the script will scrape that URL again on the next run.
-●	If you update metric logic, just rerun python analyze.py; it will read the existing .txt files and regenerate Output.xlsx.
+Input.xlsx
 
+Output Data Structure.xlsx
 
+MasterDictionary/positive-words.txt
 
+MasterDictionary/negative-words.txt
 
+StopWords/ (multiple .txt lists)
 
+src/
 
+analyze.py
 
+extract.py
 
+metrics.py
 
+Text/ (auto-created if missing)
 
+Setup
 
+Create and activate a virtual environment:
 
+py -3.12 -m venv venv
 
+venv\Scripts\activate
 
+Install dependencies:
 
+python -m pip install --upgrade pip
 
+pip install requests beautifulsoup4 lxml pandas numpy nltk regex openpyxl
 
+python -m nltk.downloader punkt
 
+Run
 
+cd src
 
+python analyze.py
 
+What happens on run
 
+For each row in Original/Input.xlsx, the script checks Text/<URL_ID>.txt.
 
+If missing/empty, it scrapes the page and saves cleaned article text.
 
+Computes all metrics and writes Output.xlsx at the project root.
 
+Re-running
 
+Delete any Text/<URL_ID>.txt to force re-scrape for that URL on the next run.
 
-
-
-
-
-
-
-C) Dependencies required
-Python version
-●	Python 3.12 (Windows). If you switch Python versions later, recreate the venv; old venvs tie to the original interpreter path.
-Python packages
-●	requests: HTTP requests for scraping
-●	beautifulsoup4: HTML parsing
-●	lxml: Faster, robust parser for BeautifulSoup
-●	pandas: Reading/writing Excel and tabular processing
-●	numpy: Numeric helpers (pandas dependency)
-●	nltk: Tokenization (sentences/words)
-●	regex: Advanced regular expressions (used by some environments; Python’s re is used for pronouns here)
-●	openpyxl: Excel read/write engine used by pandas
-Install command
-●	pip install requests beautifulsoup4 lxml pandas numpy nltk regex openpyxl
-NLTK data
-●	punkt (sentence and word tokenizers)
-●	Install via: python -m nltk.downloader punkt
-Project structure (recommended)
-●	BlackCoffer Assignment/
-●	venv/
-●	src/
-●	analyze.py
-●	extract.py
-●	metrics.py
-●	Original/
-●	Input.xlsx
-●	Output Data Structure.xlsx
-●	MasterDictionary/
-●	positive-words.txt
-●	negative-words.txt
-●	StopWords/
-●	StopWords_Auditor.txt, StopWords_Generic.txt, etc.
-●	Text/ # generated article text files
-●	Output.xlsx # generated final report
-
+If metric logic changes, rerun python analyze.py to regenerate Output.xlsx from existing text files.
