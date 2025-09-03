@@ -1,10 +1,5 @@
 Project overview
 
-This project automates:
-●	Extraction of article title and body text from each URL in Original/Input.xlsx.
-●	Text cleaning and NLP metric computation as per Text-Analysis.docx.
-●	Writing the results to an Excel file that matches Original/Output Data Structure.xlsx, saved as Output.xlsx.
-
 A) How the solution is approached
 
 1.	Clear separation of responsibilities
